@@ -97,6 +97,9 @@
 
     .lower-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 18px; margin-top: 18px; }
     .lower-panel { padding: 19px 21px; }
+    .research-panel { grid-column: 1 / -1; }
+    .research-list { display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 10px; }
+    .research-level { color: var(--green); }
     .lower-heading { display: flex; align-items: center; gap: 9px; margin-bottom: 13px; }
     .lower-heading h2 { font-size: 14px; }
     .lower-heading span { font-size: 16px; }
@@ -127,6 +130,8 @@
       .shell { width: min(560px, calc(100% - 24px)); padding-top: 23px; }
       header { margin-bottom: 20px; }
       .main-grid, .lower-grid { grid-template-columns: 1fr; }
+      .research-panel { grid-column: auto; }
+      .research-list { grid-template-columns: 1fr; }
       .star-panel { min-height: 365px; }
       .star-wrap { width: 205px; height: 205px; }
       .orbit { width: 190px; height: 190px; }
@@ -201,6 +206,11 @@
         <p class="prestige-copy" id="prestige-copy">Gather 2,500 stardust this run to start a new constellation. Your star shop resets, but milestone buffs stay forever.</p>
         <button class="prestige-button" id="prestige" disabled>Begin a new constellation</button>
       </section>
+      <section class="panel lower-panel research-panel" aria-labelledby="research-title">
+        <div class="lower-heading"><span aria-hidden="true">⚗</span><h2 id="research-title">Cosmic research</h2></div>
+        <p class="shop-note">Spend stardust on lasting discoveries. Research stays unlocked when you begin a new constellation.</p>
+        <div class="research-list" id="research-list"></div>
+      </section>
     </div>
 
     <dialog class="constellation-dialog" id="constellation-dialog" aria-labelledby="dialog-title">
@@ -249,12 +259,18 @@
           { id: "starArchitect", amount: 250000, label: "Fill the universe with stars", reward: "All helpers cost 15% less" },
           { id: "universeHeartbeat", amount: 1000000, label: "Become a universe maker", reward: "Your star taps itself once per second" }
         ];
+        const research = [
+          { id: "focus", name: "Stellar focus", icon: "🎯", description: "+2 stardust per tap per level.", baseCost: 80, growth: 2.2, maxLevel: 5 },
+          { id: "harmony", name: "Orbital harmony", icon: "🪐", description: "+10% helper production per level.", baseCost: 200, growth: 2.4, maxLevel: 5 },
+          { id: "craft", name: "Efficient crafting", icon: "🛠️", description: "Helpers cost 3% less per level.", baseCost: 150, growth: 2.1, maxLevel: 5 }
+        ];
 
       const elements = {
         dust: document.getElementById("stardust"),
         rate: document.getElementById("per-second"),
         tapPower: document.getElementById("tap-power"),
         shop: document.getElementById("shop-list"),
+        researchList: document.getElementById("research-list"),
         milestoneList: document.getElementById("milestones"),
         prestige: document.getElementById("prestige"),
         prestigeCopy: document.getElementById("prestige-copy"),
@@ -273,6 +289,7 @@
           buildings: Object.fromEntries(buildings.map(building => [building.id, 0])),
           tapLevel: 0,
           tapCount: 0,
+          research: Object.fromEntries(research.map(item => [item.id, 0])),
           constellations: 0,
           lastSeen: Date.now()
         };
@@ -291,6 +308,9 @@
           if (clean.runLifetime === 0 && clean.lifetime > 0 && parsed.runLifetime === undefined) clean.runLifetime = clean.lifetime;
           clean.tapLevel = Math.floor(validNumber(parsed.tapLevel));
           clean.tapCount = Math.floor(validNumber(parsed.tapCount));
+          for (const item of research) {
+            clean.research[item.id] = Math.min(item.maxLevel, Math.floor(validNumber(parsed.research && parsed.research[item.id])));
+          }
           clean.constellations = Math.floor(validNumber(parsed.constellations));
           clean.lastSeen = validNumber(parsed.lastSeen) || Date.now();
           for (const building of buildings) clean.buildings[building.id] = Math.floor(validNumber(parsed.buildings && parsed.buildings[building.id]));
@@ -326,7 +346,9 @@
       }
 
       function productionMultiplier() {
-        return constellationMultiplier() * (hasMilestone("moonBlessing") ? 1.15 : 1);
+        return constellationMultiplier()
+          * (hasMilestone("moonBlessing") ? 1.15 : 1)
+          * (1 + state.research.harmony * 0.1);
       }
 
       function hasMilestone(id) {
@@ -339,8 +361,10 @@
       }
 
       function buildingDiscount() {
-        return (hasMilestone("dustlingDiscount") ? 0.1 : 0)
-          + (hasMilestone("starArchitect") ? 0.15 : 0);
+        return Math.min(0.7,
+          (hasMilestone("dustlingDiscount") ? 0.1 : 0)
+          + (hasMilestone("starArchitect") ? 0.15 : 0)
+          + state.research.craft * 0.03);
       }
 
       function productionPerSecond() {
@@ -350,7 +374,7 @@
       }
 
       function tapPower() {
-        return (2 + state.tapLevel * 2) * constellationMultiplier() + (hasMilestone("firstSpark") ? 1 : 0);
+        return (2 + state.tapLevel * 2 + state.research.focus * 2) * constellationMultiplier() + (hasMilestone("firstSpark") ? 1 : 0);
       }
 
       function buildingCost(building) {
@@ -427,6 +451,33 @@
         elements.shop.replaceChildren(renderTapUpgrade(), ...availableBuildings.map(renderShopItem));
       }
 
+      function researchCost(item) {
+        return Math.ceil(item.baseCost * Math.pow(item.growth, state.research[item.id]));
+      }
+
+      function renderResearch() {
+        elements.researchList.replaceChildren(...research.map(item => {
+          const level = state.research[item.id];
+          const cost = researchCost(item);
+          const button = document.createElement("button");
+          button.className = "shop-item";
+          button.type = "button";
+          button.disabled = level >= item.maxLevel || state.dust < cost;
+          button.setAttribute("aria-label", level >= item.maxLevel
+            ? `${item.name} max level reached.`
+            : `Research ${item.name}, level ${level + 1}, for ${format(cost)} stardust.`);
+          button.innerHTML = `
+            <span class="item-icon" aria-hidden="true">${item.icon}</span>
+            <span class="item-copy">
+              <span class="item-name">${item.name}</span>
+              <span class="item-desc">${item.description}</span>
+            </span>
+            <span class="item-cost ${level >= item.maxLevel ? "research-level" : ""}">${level >= item.maxLevel ? "MAX" : `${format(cost)} ✦`}<span class="item-owned">Level: ${level}/${item.maxLevel}</span></span>`;
+          button.addEventListener("click", () => buyResearch(item));
+          return button;
+        }));
+      }
+
       function renderHud() {
         elements.dust.textContent = format(state.dust);
         elements.rate.textContent = format(productionPerSecond());
@@ -455,11 +506,16 @@
           return;
         }
         for (const button of elements.shop.children) button.disabled = state.dust < Number(button.dataset.cost);
+        for (const item of research) {
+          const button = [...elements.researchList.children].find(candidate => candidate.getAttribute("aria-label").includes(item.name));
+          if (button) button.disabled = state.research[item.id] >= item.maxLevel || state.dust < researchCost(item);
+        }
       }
 
       function markChanged(redrawShop = true) {
         dirty = true;
         renderHud();
+        renderResearch();
         if (redrawShop) renderShop();
         else refreshShopAvailability();
       }
@@ -478,6 +534,15 @@
         state.dust -= cost;
         state.tapLevel += 1;
         showToast(`Your star got brighter! Each tap now makes ${format(tapPower())} stardust.`);
+        markChanged();
+      }
+
+      function buyResearch(item) {
+        const cost = researchCost(item);
+        if (state.research[item.id] >= item.maxLevel || state.dust < cost) return;
+        state.dust -= cost;
+        state.research[item.id] += 1;
+        showToast(`${item.name} upgraded to level ${state.research[item.id]}!`);
         markChanged();
       }
 
@@ -515,7 +580,8 @@
         const next = state.constellations + 1;
         elements.constellationDialog.close();
         const startingDust = hasMilestone("cosmicPockets") ? 200 : 0;
-        state = { ...freshState(), dust: startingDust, lifetime, constellations: next };
+        const lastingResearch = { ...state.research };
+        state = { ...freshState(), dust: startingDust, lifetime, constellations: next, research: lastingResearch };
         showToast("A new constellation is born! All your milestone rewards are still shining.");
         markChanged();
         save(true);
@@ -559,6 +625,7 @@
       window.addEventListener("beforeunload", () => save(false));
 
       render();
+      renderResearch();
       setInterval(() => {
         const elapsed = Math.min(1, Math.max(0, (Date.now() - lastRender) / 1000));
         lastRender = Date.now();
