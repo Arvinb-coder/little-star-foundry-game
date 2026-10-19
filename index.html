@@ -102,11 +102,16 @@
     .research-panel { grid-column: 1 / -1; }
     .research-list { display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 10px; }
     .research-level { color: var(--green); }
+    .constellation-panel, .galaxy-panel { grid-column: 1 / -1; }
+    .perk-list, .galaxy-upgrades { display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 10px; }
+    .perk-list .shop-item, .galaxy-upgrades .shop-item { min-height: 100%; }
     .galaxy-panel { grid-column: 1 / -1; border-color: #ffd77a30; }
     .galaxy-stats { display: flex; flex-wrap: wrap; gap: 8px; margin-bottom: 14px; color: var(--gold); font-size: 12px; }
     .galaxy-stats span { padding: 7px 10px; border: 1px solid #ffd77a24; border-radius: 10px; background: #ffd77a08; }
     .galaxy-progress { height: 7px; margin: 10px 0 15px; overflow: hidden; border-radius: 99px; background: #ffffff12; }
     .galaxy-progress span { display: block; width: 0; height: 100%; border-radius: inherit; background: linear-gradient(90deg, var(--purple), var(--gold)); transition: width .25s; }
+    .galaxy-pulse { margin-top: 12px; border-color: #ffd77a55; color: #ffe7a8; background: #ffd77a12; }
+    .galaxy-pulse:hover:not(:disabled) { background: #ffd77a24; }
     .lower-heading { display: flex; align-items: center; gap: 9px; margin-bottom: 13px; }
     .lower-heading h2 { font-size: 14px; }
     .lower-heading span { font-size: 16px; }
@@ -139,7 +144,8 @@
       .main-grid, .lower-grid { grid-template-columns: 1fr; }
       .research-panel { grid-column: auto; }
       .research-list { grid-template-columns: 1fr; }
-      .galaxy-panel { grid-column: auto; }
+      .constellation-panel, .galaxy-panel { grid-column: auto; }
+      .perk-list, .galaxy-upgrades { grid-template-columns: 1fr; }
       .star-panel { min-height: 365px; }
       .star-wrap { width: 205px; height: 205px; }
       .orbit { width: 190px; height: 190px; }
@@ -223,32 +229,32 @@
       </section>
       <section class="panel lower-panel" aria-labelledby="prestige-title">
         <div class="lower-heading"><span aria-hidden="true">✧</span><h2 id="prestige-title">A fresh constellation</h2></div>
-        <p class="prestige-copy" id="prestige-copy">Gather 2,500 stardust this run to start a new constellation. Your star shop resets, but milestone buffs stay forever.</p>
+        <p class="prestige-copy" id="prestige-copy">Gather 10,000 stardust this run to start a new constellation. Each new constellation takes more stardust and earns a Star Shard.</p>
         <button class="prestige-button" id="prestige" disabled>Begin a new constellation</button>
+      </section>
+      <section class="panel lower-panel constellation-panel" aria-labelledby="constellation-upgrades-title">
+        <div class="lower-heading"><span aria-hidden="true">✧</span><h2 id="constellation-upgrades-title">Constellation blessings</h2></div>
+        <p class="shop-note" id="constellation-shards">Earn one Star Shard each time you begin a constellation. Spend them on lasting, specialized blessings.</p>
+        <div class="perk-list" id="constellation-upgrades"></div>
       </section>
       <section class="panel lower-panel research-panel" aria-labelledby="research-title">
         <div class="lower-heading"><span aria-hidden="true">⚗</span><h2 id="research-title">Cosmic research</h2></div>
-        <p class="shop-note">Spend stardust on lasting discoveries. Research stays unlocked when you begin a new constellation.</p>
+        <p class="shop-note">Lasting discoveries survive constellation resets. Deeper research gets much more expensive with every level and constellation.</p>
         <div class="research-list" id="research-list"></div>
       </section>
       <section class="panel lower-panel galaxy-panel" aria-labelledby="galaxy-title">
         <div class="lower-heading"><span aria-hidden="true">🌌</span><h2 id="galaxy-title">Galaxy Forge</h2></div>
-        <p class="prestige-copy" id="galaxy-copy">Build 10 constellations to forge your first galaxy. A Galaxy Forge resets your current universe, but grants a Galaxy Core and permanent galactic power.</p>
+        <p class="prestige-copy" id="galaxy-copy">Build 10 constellations to forge your first galaxy. Each galaxy raises the next forge requirement.</p>
         <div class="galaxy-stats">
           <span id="galaxies-count">Galaxies forged: 0</span>
           <span id="galaxy-progress-label">Constellations: 0 / 10</span>
-          <span id="galaxy-upgrade-level">Galactic power: Level 0</span>
+          <span id="galaxy-cores-label">Galaxy Cores: 0</span>
         </div>
         <div class="galaxy-progress" role="progressbar" aria-label="Constellations toward Galaxy Forge" aria-valuemin="0" aria-valuemax="10" aria-valuenow="0"><span id="galaxy-progress-fill"></span></div>
         <button class="prestige-button" id="forge-galaxy" disabled>Forge a Galaxy</button>
-        <button class="shop-item" id="galaxy-upgrade" type="button" disabled>
-          <span class="item-icon" aria-hidden="true">✺</span>
-          <span class="item-copy">
-            <span class="item-name">Galactic resonance</span>
-            <span class="item-desc">Each level permanently increases all stardust gains by 25%.</span>
-          </span>
-          <span class="item-cost" id="galaxy-upgrade-cost">1 core<span class="item-owned">Level: 0/10</span></span>
-        </button>
+        <button class="prestige-button galaxy-pulse" id="galaxy-pulse" type="button" disabled>Galaxy Pulse (forge your first galaxy to unlock)</button>
+        <p class="shop-note">Choose how your galaxy grows. Upgrade paths specialize in production, offline discoveries, and faster constellations.</p>
+        <div class="galaxy-upgrades" id="galaxy-upgrades"></div>
       </section>
     </div>
 
@@ -299,9 +305,20 @@
           { id: "universeHeartbeat", amount: 1000000, label: "Become a universe maker", reward: "Your star taps itself once per second" }
         ];
         const research = [
-          { id: "focus", name: "Stellar focus", icon: "🎯", description: "+2 stardust per tap per level.", baseCost: 80, growth: 2.2, maxLevel: 5 },
-          { id: "harmony", name: "Orbital harmony", icon: "🪐", description: "+10% helper production per level.", baseCost: 200, growth: 2.4, maxLevel: 5 },
-          { id: "craft", name: "Efficient crafting", icon: "🛠️", description: "Helpers cost 3% less per level.", baseCost: 150, growth: 2.1, maxLevel: 5 }
+          { id: "focus", name: "Stellar focus", icon: "🎯", description: "+2 stardust per tap per level.", baseCost: 70, growth: 3, maxLevel: 5 },
+          { id: "harmony", name: "Orbital harmony", icon: "🪐", description: "+10% helper production per level.", baseCost: 175, growth: 3.2, maxLevel: 5 },
+          { id: "craft", name: "Efficient crafting", icon: "🛠️", description: "Helpers cost 3% less per level.", baseCost: 140, growth: 3, maxLevel: 5 }
+        ];
+        const constellationUpgrades = [
+          { id: "reservoir", name: "Dawn reservoir", icon: "🌅", description: "Begin each constellation with 500 extra stardust per level.", maxLevel: 5 },
+          { id: "echo", name: "Echo orbit", icon: "🪞", description: "Adds one passive tap per second per level.", maxLevel: 5 },
+          { id: "meteor", name: "Meteor rhythm", icon: "☄️", description: "Every 10th tap releases a burst worth 2 extra taps per level.", maxLevel: 5 }
+        ];
+        const galaxyUpgrades = [
+          { id: "engines", name: "Nebula engines", icon: "🌀", description: "+30% helper production per level.", maxLevel: 10 },
+          { id: "chronicle", name: "Chrono wake", icon: "⌛", description: "+4 hours of offline earnings per level.", maxLevel: 5 },
+          { id: "cartography", name: "Deep cartography", icon: "🗺️", description: "Reduces rising constellation costs by 8% per level.", maxLevel: 5 },
+          { id: "pulsar", name: "Pulsar amplifier", icon: "💫", description: "Galaxy Pulse lasts 10 seconds longer and is 0.5× stronger per level.", maxLevel: 5 }
         ];
 
       const elements = {
@@ -311,6 +328,10 @@
         tapPower: document.getElementById("tap-power"),
         shop: document.getElementById("shop-list"),
         researchList: document.getElementById("research-list"),
+        constellationUpgrades: document.getElementById("constellation-upgrades"),
+        constellationShards: document.getElementById("constellation-shards"),
+        galaxyUpgrades: document.getElementById("galaxy-upgrades"),
+        galaxyPulse: document.getElementById("galaxy-pulse"),
         milestoneList: document.getElementById("milestones"),
         prestige: document.getElementById("prestige"),
         prestigeCopy: document.getElementById("prestige-copy"),
@@ -325,14 +346,16 @@
         galaxyProgressLabel: document.getElementById("galaxy-progress-label"),
         galaxyProgress: document.querySelector(".galaxy-progress"),
         galaxyProgressFill: document.getElementById("galaxy-progress-fill"),
-        galaxyUpgrade: document.getElementById("galaxy-upgrade"),
-        galaxyUpgradeCost: document.getElementById("galaxy-upgrade-cost"),
-        galaxyUpgradeLevel: document.getElementById("galaxy-upgrade-level"),
+        galaxyCoresLabel: document.getElementById("galaxy-cores-label"),
         saveStatus: document.getElementById("save-status"),
         starWrap: document.getElementById("star-wrap"),
         toast: document.getElementById("toast")
       };
-      const GALAXY_FORGE_REQUIREMENT = 10;
+      const CONSTELLATION_BASE_REQUIREMENT = 10000;
+      const CONSTELLATION_REQUIREMENT_GROWTH = 1.35;
+      const GALAXY_BASE_REQUIREMENT = 10;
+      const GALAXY_REQUIREMENT_STEP = 5;
+      const GALAXY_PULSE_COOLDOWN = 5 * 60 * 1000;
       let purchaseAmount = 1;
       let pendingReset = "constellation";
 
@@ -346,9 +369,13 @@
           tapCount: 0,
           research: Object.fromEntries(research.map(item => [item.id, 0])),
           constellations: 0,
+          constellationShards: 0,
+          constellationUpgrades: Object.fromEntries(constellationUpgrades.map(item => [item.id, 0])),
           galaxies: 0,
           galaxyCores: 0,
-          galaxyResearch: 0,
+          galaxyUpgrades: Object.fromEntries(galaxyUpgrades.map(item => [item.id, 0])),
+          galaxyPulseReadyAt: 0,
+          galaxyPulseUntil: 0,
           lastSeen: Date.now()
         };
       }
@@ -370,9 +397,23 @@
             clean.research[item.id] = Math.min(item.maxLevel, Math.floor(validNumber(parsed.research && parsed.research[item.id])));
           }
           clean.constellations = Math.floor(validNumber(parsed.constellations));
+          clean.constellationShards = Math.floor(validNumber(parsed.constellationShards === undefined
+            ? parsed.constellations
+            : parsed.constellationShards));
+          for (const item of constellationUpgrades) {
+            clean.constellationUpgrades[item.id] = Math.min(item.maxLevel,
+              Math.floor(validNumber(parsed.constellationUpgrades && parsed.constellationUpgrades[item.id])));
+          }
           clean.galaxies = Math.floor(validNumber(parsed.galaxies));
           clean.galaxyCores = Math.floor(validNumber(parsed.galaxyCores));
-          clean.galaxyResearch = Math.min(10, Math.floor(validNumber(parsed.galaxyResearch)));
+          const legacyGalaxyResearch = Math.floor(validNumber(parsed.galaxyResearch));
+          for (const item of galaxyUpgrades) {
+            const savedLevel = parsed.galaxyUpgrades && parsed.galaxyUpgrades[item.id];
+            clean.galaxyUpgrades[item.id] = Math.min(item.maxLevel,
+              Math.floor(validNumber(savedLevel === undefined && item.id === "engines" ? legacyGalaxyResearch : savedLevel)));
+          }
+          clean.galaxyPulseReadyAt = validNumber(parsed.galaxyPulseReadyAt);
+          clean.galaxyPulseUntil = validNumber(parsed.galaxyPulseUntil);
           clean.lastSeen = validNumber(parsed.lastSeen) || Date.now();
           for (const building of buildings) clean.buildings[building.id] = Math.floor(validNumber(parsed.buildings && parsed.buildings[building.id]));
           return clean;
@@ -402,15 +443,34 @@
       }
 
       function constellationMultiplier() {
-        const bonusPerConstellation = hasMilestone("constellationMaster") ? 0.5 : 0.25;
-        return 1 + state.constellations * bonusPerConstellation;
+        return 1 + state.constellations * constellationBonusPercent() / 100;
+      }
+
+      function constellationBonusPercent() {
+        return hasMilestone("constellationMaster") ? 50 : 25;
+      }
+
+      function constellationRequirement() {
+        const reduction = state.galaxyUpgrades.cartography * 0.08;
+        return Math.ceil(CONSTELLATION_BASE_REQUIREMENT
+          * Math.pow(CONSTELLATION_REQUIREMENT_GROWTH, state.constellations)
+          * (1 - reduction));
+      }
+
+      function galaxyForgeRequirement() {
+        return GALAXY_BASE_REQUIREMENT + state.galaxies * GALAXY_REQUIREMENT_STEP;
+      }
+
+      function galaxyPulseMultiplier() {
+        return Date.now() < state.galaxyPulseUntil ? 2 + state.galaxyUpgrades.pulsar * 0.5 : 1;
       }
 
       function productionMultiplier() {
         return constellationMultiplier()
           * (hasMilestone("moonBlessing") ? 1.15 : 1)
           * (1 + state.research.harmony * 0.1)
-          * (1 + state.galaxyResearch * 0.25);
+          * (1 + state.galaxyUpgrades.engines * 0.3)
+          * galaxyPulseMultiplier();
       }
 
       function hasMilestone(id) {
@@ -419,7 +479,9 @@
       }
 
       function offlineCapSeconds() {
-        return BASE_OFFLINE_SECONDS + (hasMilestone("deepSky") ? BASE_OFFLINE_SECONDS : 0);
+        return BASE_OFFLINE_SECONDS
+          + (hasMilestone("deepSky") ? BASE_OFFLINE_SECONDS : 0)
+          + state.galaxyUpgrades.chronicle * 4 * 60 * 60;
       }
 
       function buildingDiscount() {
@@ -432,11 +494,13 @@
       function productionPerSecond() {
         const buildingProduction = buildings.reduce((total, building) => total + state.buildings[building.id] * building.baseRate, 0);
         const autoTapProduction = hasMilestone("universeHeartbeat") ? tapPower() : 0;
-        return buildingProduction * productionMultiplier() + autoTapProduction;
+        const echoProduction = tapPower() * state.constellationUpgrades.echo;
+        return buildingProduction * productionMultiplier() + autoTapProduction + echoProduction;
       }
 
       function tapPower() {
-        return (1 + state.tapLevel + state.research.focus * 2) * constellationMultiplier() * (1 + state.galaxyResearch * 0.25) + (hasMilestone("firstSpark") ? 1 : 0);
+        return (1 + state.tapLevel + state.research.focus * 2) * constellationMultiplier()
+          * galaxyPulseMultiplier() + (hasMilestone("firstSpark") ? 1 : 0);
       }
 
       function buildingCost(building) {
@@ -527,7 +591,11 @@
       }
 
       function researchCost(item) {
-        return Math.ceil(item.baseCost * Math.pow(item.growth, state.research[item.id]));
+        return researchCostAtLevel(item, state.research[item.id]);
+      }
+
+      function researchCostAtLevel(item, level) {
+        return Math.ceil(item.baseCost * Math.pow(item.growth, level) * Math.pow(1.2, state.constellations));
       }
 
       function renderResearch() {
@@ -553,11 +621,58 @@
         }));
       }
 
+      function renderConstellationUpgrades() {
+        elements.constellationUpgrades.replaceChildren(...constellationUpgrades.map(item => {
+          const level = state.constellationUpgrades[item.id];
+          const cost = level + 1;
+          const button = document.createElement("button");
+          button.className = "shop-item";
+          button.type = "button";
+          button.disabled = level >= item.maxLevel || state.constellationShards < cost;
+          button.setAttribute("aria-label", level >= item.maxLevel
+            ? `${item.name} max level reached.`
+            : `Upgrade ${item.name} to level ${level + 1} for ${cost} Star Shard${cost === 1 ? "" : "s"}.`);
+          button.innerHTML = `
+            <span class="item-icon" aria-hidden="true">${item.icon}</span>
+            <span class="item-copy">
+              <span class="item-name">${item.name}</span>
+              <span class="item-desc">${item.description}</span>
+            </span>
+            <span class="item-cost">${level >= item.maxLevel ? "MAX" : `${cost} ✧`}<span class="item-owned">Level: ${level}/${item.maxLevel}</span></span>`;
+          button.addEventListener("click", () => buyConstellationUpgrade(item));
+          return button;
+        }));
+      }
+
+      function renderGalaxyUpgrades() {
+        elements.galaxyUpgrades.replaceChildren(...galaxyUpgrades.map(item => {
+          const level = state.galaxyUpgrades[item.id];
+          const cost = level + 1;
+          const button = document.createElement("button");
+          button.className = "shop-item";
+          button.type = "button";
+          button.disabled = state.galaxies < 1 || level >= item.maxLevel || state.galaxyCores < cost;
+          button.setAttribute("aria-label", level >= item.maxLevel
+            ? `${item.name} max level reached.`
+            : `Upgrade ${item.name} to level ${level + 1} for ${cost} Galaxy Core${cost === 1 ? "" : "s"}.`);
+          button.innerHTML = `
+            <span class="item-icon" aria-hidden="true">${item.icon}</span>
+            <span class="item-copy">
+              <span class="item-name">${item.name}</span>
+              <span class="item-desc">${item.description}</span>
+            </span>
+            <span class="item-cost">${level >= item.maxLevel ? "MAX" : `${cost} ✺`}<span class="item-owned">Level: ${level}/${item.maxLevel}</span></span>`;
+          button.addEventListener("click", () => buyGalaxyUpgrade(item));
+          return button;
+        }));
+      }
+
       function renderHud() {
         elements.dust.textContent = format(state.dust);
         elements.rate.textContent = format(productionPerSecond());
         elements.tapPower.textContent = `${format(tapPower())} stardust`;
         elements.cores.textContent = format(state.galaxyCores);
+        elements.constellationShards.textContent = `Star Shards: ${format(state.constellationShards)} — earn one each time you begin a constellation.`;
         elements.milestoneList.replaceChildren(...milestones.map(milestone => {
           const item = document.createElement("div");
           const done = state.lifetime >= milestone.amount;
@@ -565,26 +680,35 @@
           item.innerHTML = `<span class="check" aria-hidden="true">${done ? "✓" : "·"}</span><span class="milestone-copy"><span>${milestone.label}</span><span class="milestone-reward">${milestone.reward}</span></span>`;
           return item;
         }));
-        const prestigeReady = state.runLifetime >= 10000;
+        const nextConstellationCost = constellationRequirement();
+        const prestigeReady = state.runLifetime >= nextConstellationCost;
         elements.prestige.disabled = !prestigeReady;
         elements.prestigeCopy.textContent = prestigeReady
-          ? `Your next constellation adds a permanent +25% glow bonus. Every unique milestone reward you've earned stays forever.`
-          : `Gather ${format(Math.max(0, 10000 - state.runLifetime))} more stardust this run to start a new constellation. Your shop resets, but your lifetime milestone rewards stay forever.`;
-        const galaxyProgress = Math.min(GALAXY_FORGE_REQUIREMENT, state.constellations);
-        elements.galaxyProgressLabel.textContent = `Constellations: ${galaxyProgress} / ${GALAXY_FORGE_REQUIREMENT}`;
+          ? `Your next constellation earns a Star Shard and permanent +${constellationBonusPercent()}% glow. Its ${format(nextConstellationCost)} stardust requirement grows each time.`
+          : `Gather ${format(Math.max(0, nextConstellationCost - state.runLifetime))} more stardust this run (of ${format(nextConstellationCost)}). Requirements rise with every constellation.`;
+        const galaxyRequirement = galaxyForgeRequirement();
+        const galaxyProgress = Math.min(galaxyRequirement, state.constellations);
+        elements.galaxyProgressLabel.textContent = `Constellations: ${galaxyProgress} / ${galaxyRequirement}`;
+        elements.galaxyProgress.setAttribute("aria-valuemax", String(galaxyRequirement));
         elements.galaxyProgress.setAttribute("aria-valuenow", String(galaxyProgress));
-        elements.galaxyProgressFill.style.width = `${galaxyProgress / GALAXY_FORGE_REQUIREMENT * 100}%`;
+        elements.galaxyProgressFill.style.width = `${galaxyProgress / galaxyRequirement * 100}%`;
         elements.galaxiesCount.textContent = `Galaxies forged: ${format(state.galaxies)}`;
-        elements.galaxyUpgradeLevel.textContent = `Galactic power: Level ${state.galaxyResearch}/10`;
-        elements.galaxyCopy.textContent = state.constellations >= GALAXY_FORGE_REQUIREMENT
+        elements.galaxyCoresLabel.textContent = `Galaxy Cores: ${format(state.galaxyCores)}`;
+        elements.galaxyCopy.textContent = state.constellations >= galaxyRequirement
           ? "Your constellation chain is ready. Forge a Galaxy to earn a Core and begin a new universe."
-          : `Earn ${GALAXY_FORGE_REQUIREMENT - state.constellations} more constellation${GALAXY_FORGE_REQUIREMENT - state.constellations === 1 ? "" : "s"} to forge a Galaxy. The forge resets your universe, but Galaxy Cores and Galactic Resonance stay.`;
-        elements.forgeGalaxy.disabled = state.constellations < GALAXY_FORGE_REQUIREMENT;
-        const coreCost = state.galaxyResearch + 1;
-        elements.galaxyUpgrade.disabled = state.galaxyResearch >= 10 || state.galaxyCores < coreCost;
-        elements.galaxyUpgradeCost.innerHTML = state.galaxyResearch >= 10
-          ? `MAX<span class="item-owned">Level: ${state.galaxyResearch}/10</span>`
-          : `${coreCost} core${coreCost === 1 ? "" : "s"}<span class="item-owned">Level: ${state.galaxyResearch}/10</span>`;
+          : `Earn ${galaxyRequirement - state.constellations} more constellation${galaxyRequirement - state.constellations === 1 ? "" : "s"} to forge a Galaxy. Each forge raises the next target by ${GALAXY_REQUIREMENT_STEP}.`;
+        elements.forgeGalaxy.disabled = state.constellations < galaxyRequirement;
+        const now = Date.now();
+        const pulseSecondsLeft = Math.ceil(Math.max(0, state.galaxyPulseUntil - now) / 1000);
+        const cooldownSecondsLeft = Math.ceil(Math.max(0, state.galaxyPulseReadyAt - now) / 1000);
+        elements.galaxyPulse.disabled = state.galaxies < 1 || pulseSecondsLeft > 0 || cooldownSecondsLeft > 0;
+        elements.galaxyPulse.textContent = state.galaxies < 1
+          ? "Galaxy Pulse (forge your first galaxy to unlock)"
+          : pulseSecondsLeft > 0
+            ? `Galaxy Pulse active — ${pulseSecondsLeft}s`
+            : cooldownSecondsLeft > 0
+              ? `Galaxy Pulse recharging — ${format(Math.ceil(cooldownSecondsLeft / 60))}m`
+              : `Activate Galaxy Pulse — ${format(2 + state.galaxyUpgrades.pulsar * 0.5)}× stardust for ${20 + state.galaxyUpgrades.pulsar * 10} seconds`;
       }
 
       function refreshShopAvailability() {
@@ -594,12 +718,23 @@
           || [...elements.shop.children].some((button, index) => Number(button.dataset.cost) !== costs[index]);
         if (shopNeedsRedraw) {
           elements.shop.replaceChildren(renderTapUpgrade(), ...availableBuildings.map(renderShopItem));
-          return;
+        } else {
+          for (const button of elements.shop.children) button.disabled = state.dust < Number(button.dataset.cost);
         }
-        for (const button of elements.shop.children) button.disabled = state.dust < Number(button.dataset.cost);
         for (const item of research) {
           const button = [...elements.researchList.children].find(candidate => candidate.getAttribute("aria-label").includes(item.name));
           if (button) button.disabled = state.research[item.id] >= item.maxLevel || state.dust < researchCost(item);
+        }
+        for (const item of constellationUpgrades) {
+          const button = [...elements.constellationUpgrades.children].find(candidate => candidate.getAttribute("aria-label").includes(item.name));
+          if (button) button.disabled = state.constellationUpgrades[item.id] >= item.maxLevel
+            || state.constellationShards < state.constellationUpgrades[item.id] + 1;
+        }
+        for (const item of galaxyUpgrades) {
+          const button = [...elements.galaxyUpgrades.children].find(candidate => candidate.getAttribute("aria-label").includes(item.name));
+          if (button) button.disabled = state.galaxies < 1
+            || state.galaxyUpgrades[item.id] >= item.maxLevel
+            || state.galaxyCores < state.galaxyUpgrades[item.id] + 1;
         }
       }
 
@@ -607,6 +742,8 @@
         dirty = true;
         renderHud();
         renderResearch();
+        renderConstellationUpgrades();
+        renderGalaxyUpgrades();
         if (redrawShop) renderShop();
         else refreshShopAvailability();
       }
@@ -632,7 +769,7 @@
 
       function buyResearch(item) {
         const batch = affordableBatch(state.dust, item.maxLevel - state.research[item.id], offset =>
-          Math.ceil(item.baseCost * Math.pow(item.growth, state.research[item.id] + offset)));
+          researchCostAtLevel(item, state.research[item.id] + offset));
         if (!batch.count) return;
         state.dust -= batch.total;
         state.research[item.id] += batch.count;
@@ -640,11 +777,48 @@
         markChanged();
       }
 
+      function buyConstellationUpgrade(item) {
+        const level = state.constellationUpgrades[item.id];
+        const batch = affordableBatch(state.constellationShards, item.maxLevel - level, offset => level + offset + 1);
+        if (!batch.count) return;
+        state.constellationShards -= batch.total;
+        state.constellationUpgrades[item.id] += batch.count;
+        showToast(`${item.name} reached level ${state.constellationUpgrades[item.id]}!`);
+        markChanged();
+        save(true);
+      }
+
+      function buyGalaxyUpgrade(item) {
+        if (state.galaxies < 1) return;
+        const level = state.galaxyUpgrades[item.id];
+        const batch = affordableBatch(state.galaxyCores, item.maxLevel - level, offset => level + offset + 1);
+        if (!batch.count) return;
+        state.galaxyCores -= batch.total;
+        state.galaxyUpgrades[item.id] += batch.count;
+        showToast(`${item.name} reached level ${state.galaxyUpgrades[item.id]}!`);
+        markChanged();
+        save(true);
+      }
+
+      function activateGalaxyPulse() {
+        const now = Date.now();
+        if (state.galaxies < 1 || now < state.galaxyPulseReadyAt) return;
+        const duration = (20 + state.galaxyUpgrades.pulsar * 10) * 1000;
+        state.galaxyPulseUntil = now + duration;
+        state.galaxyPulseReadyAt = state.galaxyPulseUntil + GALAXY_PULSE_COOLDOWN;
+        showToast(`Galaxy Pulse activated for ${duration / 1000} seconds!`);
+        markChanged();
+        save(true);
+      }
+
       function makeDust(event) {
         state.tapCount += 1;
         const tap = tapPower();
         const combo = hasMilestone("cometCombo") && state.tapCount % 10 === 0;
-        const amount = tap * (combo ? 5 : 1);
+        const meteorBurst = state.constellationUpgrades.meteor > 0 && state.tapCount % 10 === 0
+          ? state.constellationUpgrades.meteor * 2
+          : 0;
+        const amount = tap * ((combo ? 5 : 1) + meteorBurst);
         state.dust += amount;
         state.lifetime += amount;
         state.runLifetime += amount;
@@ -652,7 +826,7 @@
         const rect = elements.starWrap.getBoundingClientRect();
         const float = document.createElement("span");
         float.className = "float-text";
-        float.textContent = `+${format(amount)} ✦${combo ? " COMBO!" : ""}`;
+        float.textContent = `+${format(amount)} ✦${combo || meteorBurst ? " COMBO!" : ""}`;
         float.style.left = `${event.clientX - rect.left}px`;
         float.style.top = `${event.clientY - rect.top}px`;
         elements.starWrap.append(float);
@@ -660,58 +834,81 @@
       }
 
       function beginConstellation() {
-        if (state.runLifetime < 10000) return;
+        const requirement = constellationRequirement();
+        if (state.runLifetime < requirement) return;
         const next = state.constellations + 1;
         pendingReset = "constellation";
         elements.dialogTitle.textContent = `Begin constellation ${next}?`;
         elements.dialogCopy.textContent = "Your stardust, helpers, and tap upgrades will reset.";
-        elements.dialogBonus.textContent = "This adds a permanent +25% production and tapping bonus. Your milestone rewards and cosmic research remain.";
+        elements.dialogBonus.textContent = `Gain 1 Star Shard and a permanent +${constellationBonusPercent()}% production and tapping bonus. The next constellation will require ${format(Math.ceil(CONSTELLATION_BASE_REQUIREMENT * Math.pow(CONSTELLATION_REQUIREMENT_GROWTH, next) * (1 - state.galaxyUpgrades.cartography * 0.08)))} stardust.`;
         elements.confirmReset.textContent = "Begin constellation";
         elements.constellationDialog.showModal();
       }
 
       function beginGalaxyForge() {
-        if (state.constellations < GALAXY_FORGE_REQUIREMENT) return;
+        const requirement = galaxyForgeRequirement();
+        if (state.constellations < requirement) return;
         pendingReset = "galaxy";
         elements.dialogTitle.textContent = "Forge a new Galaxy?";
         elements.dialogCopy.textContent = `Your stardust, helpers, tap upgrades, ${format(state.constellations)} constellations, and cosmic research will reset.`;
-        elements.dialogBonus.textContent = "You will gain 1 Galaxy Core. Galaxy Cores and Galactic Resonance upgrades are permanent.";
+        elements.dialogBonus.textContent = "Gain 1 Galaxy Core. Star Shards, constellation blessings, and Galaxy upgrades are permanent. The next Galaxy requires 5 more constellations.";
         elements.confirmReset.textContent = "Forge Galaxy";
         elements.constellationDialog.showModal();
       }
 
       function confirmConstellation() {
-        if (state.runLifetime < 10000 || !elements.constellationDialog.open) return;
+        if (state.runLifetime < constellationRequirement() || !elements.constellationDialog.open) return;
         const lifetime = state.lifetime;
         const next = state.constellations + 1;
         elements.constellationDialog.close();
-        const startingDust = hasMilestone("cosmicPockets") ? 200 : 0;
+        const startingDust = (hasMilestone("cosmicPockets") ? 200 : 0)
+          + state.constellationUpgrades.reservoir * 500;
         const lastingResearch = { ...state.research };
-        state = { ...freshState(), dust: startingDust, lifetime, constellations: next, research: lastingResearch };
-        showToast("A new constellation is born! All your milestone rewards are still shining.");
+        const constellationShards = state.constellationShards + 1;
+        const lastingConstellationUpgrades = { ...state.constellationUpgrades };
+        const lastingGalaxyUpgrades = { ...state.galaxyUpgrades };
+        const galaxyCores = state.galaxyCores;
+        const galaxies = state.galaxies;
+        const galaxyPulseReadyAt = state.galaxyPulseReadyAt;
+        const galaxyPulseUntil = state.galaxyPulseUntil;
+        state = {
+          ...freshState(),
+          dust: startingDust,
+          lifetime,
+          constellations: next,
+          constellationShards,
+          constellationUpgrades: lastingConstellationUpgrades,
+          research: lastingResearch,
+          galaxies,
+          galaxyCores,
+          galaxyUpgrades: lastingGalaxyUpgrades,
+          galaxyPulseReadyAt,
+          galaxyPulseUntil
+        };
+        showToast("A new constellation is born! You earned a Star Shard and kept your permanent blessings.");
         markChanged();
         save(true);
       }
 
       function forgeGalaxy() {
-        if (state.constellations < GALAXY_FORGE_REQUIREMENT || !elements.constellationDialog.open) return;
+        if (state.constellations < galaxyForgeRequirement() || !elements.constellationDialog.open) return;
         const galaxies = state.galaxies + 1;
         const galaxyCores = state.galaxyCores + 1;
-        const galaxyResearch = state.galaxyResearch;
+        const constellationShards = state.constellationShards;
+        const constellationUpgrades = { ...state.constellationUpgrades };
+        const galaxyUpgrades = { ...state.galaxyUpgrades };
         elements.constellationDialog.close();
-        state = { ...freshState(), galaxies, galaxyCores, galaxyResearch };
-        showToast(`Galaxy ${format(galaxies)} forged! You earned a Galaxy Core.`);
+        state = {
+          ...freshState(),
+          galaxies,
+          galaxyCores,
+          constellationShards,
+          constellationUpgrades,
+          galaxyUpgrades
+        };
+        showToast(`Galaxy ${format(galaxies)} forged! You earned a Galaxy Core and unlocked Galaxy Pulse.`);
         markChanged();
         save(true);
-      }
-
-      function buyGalaxyUpgrade() {
-        const batch = affordableBatch(state.galaxyCores, 10 - state.galaxyResearch, offset => state.galaxyResearch + offset + 1);
-        if (!batch.count) return;
-        state.galaxyCores -= batch.total;
-        state.galaxyResearch += batch.count;
-        showToast(`Galactic Resonance upgraded to level ${state.galaxyResearch}!`);
-        markChanged();
       }
 
       function confirmReset() {
@@ -742,7 +939,7 @@
       document.getElementById("make-star").addEventListener("click", makeDust);
       elements.prestige.addEventListener("click", beginConstellation);
       elements.forgeGalaxy.addEventListener("click", beginGalaxyForge);
-      elements.galaxyUpgrade.addEventListener("click", buyGalaxyUpgrade);
+      elements.galaxyPulse.addEventListener("click", activateGalaxyPulse);
       document.getElementById("cancel-constellation").addEventListener("click", () => elements.constellationDialog.close());
       elements.confirmReset.addEventListener("click", confirmReset);
       document.getElementById("purchase-amount").addEventListener("change", event => {
@@ -766,6 +963,8 @@
 
       render();
       renderResearch();
+      renderConstellationUpgrades();
+      renderGalaxyUpgrades();
       setInterval(() => {
         const elapsed = Math.min(1, Math.max(0, (Date.now() - lastRender) / 1000));
         lastRender = Date.now();
